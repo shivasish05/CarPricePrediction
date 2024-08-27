@@ -24,7 +24,7 @@ class DataIngestion:
     def initiate_data_ingestion(self):
         logging.info('Entered data ingestion method')
         try:
-            df = pd.read_csv('data/cardekho_dataset.csv',index_col=[0]) 
+            df = pd.read_csv('data/cardekho_dataset.csv',index_col=0) 
             logging.info('Read the dataset as dataframe')
 
             os.makedirs(os.path.dirname(self.ingestion_config.train_data_path),exist_ok = True)  
