@@ -13,7 +13,7 @@ def get_openai_response(prompt, api_key):
         response = client.chat.completions.create(
             model="gpt-4o",  # You can change this to a different model if needed
             messages=[
-    {"role": "system", "content": "You are a helpful assistant, based of predicted price give suggestions of ."},
+    {"role": "system", "content": "You are consultent."},
     {"role": "user", "content": prompt}
   ],
         )
@@ -33,6 +33,24 @@ def main():
     st.write("Please enter the details of the car to get the price prediction.")
 
     # Collect input from the user
+    model = st.selectbox("Model Name",['Alto', 'Grand', 'i20', 'Ecosport', 'Wagon R', 'i10', 'Venue',
+       'Swift', 'Verna', 'Duster', 'Cooper', 'Ciaz', 'C-Class', 'Innova',
+       'Baleno', 'Swift Dzire', 'Vento', 'Creta', 'City', 'Bolero',
+       'Fortuner', 'KWID', 'Amaze', 'Santro', 'XUV500', 'KUV100', 'Ignis',
+       'RediGO', 'Scorpio', 'Marazzo', 'Aspire', 'Figo', 'Vitara',
+       'Tiago', 'Polo', 'Seltos', 'Celerio', 'GO', '5', 'CR-V',
+       'Endeavour', 'KUV', 'Jazz', '3', 'A4', 'Tigor', 'Ertiga', 'Safari',
+       'Thar', 'Hexa', 'Rover', 'Eeco', 'A6', 'E-Class', 'Q7', 'Z4', '6',
+       'XF', 'X5', 'Hector', 'Civic', 'D-Max', 'Cayenne', 'X1', 'Rapid',
+       'Freestyle', 'Superb', 'Nexon', 'XUV300', 'Dzire VXI', 'S90',
+       'WR-V', 'XL6', 'Triber', 'ES', 'Wrangler', 'Camry', 'Elantra',
+       'Yaris', 'GL-Class', '7', 'S-Presso', 'Dzire LXI', 'Aura', 'XC',
+       'Ghibli', 'Continental', 'CR', 'Kicks', 'S-Class', 'Tucson',
+       'Harrier', 'X3', 'Octavia', 'Compass', 'CLS', 'redi-GO', 'Glanza',
+       'Macan', 'X4', 'Dzire ZXI', 'XC90', 'F-PACE', 'A8', 'MUX',
+       'GTC4Lusso', 'GLS', 'X-Trail', 'XE', 'XC60', 'Panamera', 'Alturas',
+       'Altroz', 'NX', 'Carnival', 'C', 'RX', 'Ghost', 'Quattroporte',
+       'Gurkha'])
     vehicle_age = st.text_input("Vehicle Age (e.g., 2 years)")
     km_driven = st.number_input("KM Driven", min_value=0.0, step=100.0)
     mileage = st.number_input("Mileage (in km/l)", min_value=0.0, step=0.1)
@@ -47,6 +65,7 @@ def main():
     if st.button("Predict"):
         # Create an instance of CustomData with the user input
         custom_data = CustomData(
+            model = model,
             vehicle_age=vehicle_age,
             km_driven=km_driven,
             mileage=mileage,
@@ -66,12 +85,17 @@ def main():
         prediction = predict_pipeline.predict(data_df)
 
         # Show prediction result
-        st.markdown(f"Predicted Price: {prediction[0]:,.2f}")
+        st.markdown(
+    f"<h3 style='color: #FF6347;'>Predicted Price: <span style='color: #32CD32;'>₹{prediction[0]:,.2f}</span></h3>",
+    unsafe_allow_html=True
+)
 
         # Generate and display response from OpenAI if API key is provided
         if api_key:
-            prompt = (f"""The predicted price for a car with the following details is ${prediction[0]:,.2f}:
+            prompt = ( f"""
+You are a seasoned automotive consultant with extensive experience in evaluating used car prices. Based on the prediction for a {model} with the following details:
 
+- **Model:** {model}
 - **Vehicle Age:** {vehicle_age} years
 - **KM Driven:** {km_driven} km
 - **Mileage:** {mileage} km/l
@@ -82,16 +106,19 @@ def main():
 - **Fuel Type:** {fuel_type}
 - **Transmission Type:** {transmission_type}
 
-Please provide a detailed response addressing the following:
+The predicted price is ₹{prediction[0]:,.2f}.
 
-1. **Market Comparison:** How does this predicted price compare to similar cars currently on the market? Are there any trends or patterns that influence this price?
-2. **Value Proposition:** What factors contribute to this predicted price? How do the car’s features and condition impact the price?
-3. **Actionable Advice:** For a buyer, what should they consider based on this prediction? For a seller, what strategies should they use to maximize their selling price?
-4. **Improvement Tips:** Are there any potential improvements or modifications that could increase the car’s value?
-5. **Risk Factors:** What are the potential risks or uncertainties associated with this prediction?
+Please provide a detailed analysis including:
 
-Provide a comprehensive and actionable explanation to help users understand and make informed decisions based on this prediction.
-""")
+1. **Market Position:** Compare this predicted price with similar vehicles currently available in the market. Are there any specific trends, brand value, or market conditions affecting this price?
+
+2. **Price Justification:** Explain the factors that contribute to this predicted price. Consider the car’s age, condition, mileage, and features. How do these aspects affect the value of the vehicle in the current market?
+
+3. **Actionable Insights:** Provide practical advice on what actions the user can take to either increase the car’s value or negotiate effectively if they are buying or selling this vehicle.
+
+The goal is to help the user make well-informed decisions regarding their car based on the prediction and current market conditions.
+"""
+)
 
             response = get_openai_response(prompt, api_key)
             st.write("Response from OpenAI:")

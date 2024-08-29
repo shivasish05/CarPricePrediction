@@ -3,12 +3,10 @@ import os
 from dataclasses import dataclass
 import numpy as np 
 import pandas as pd 
-
-
 from sklearn.compose import ColumnTransformer
-from sklearn.impute import SimpleImputer ## Handels missing values in df
+from sklearn.impute import SimpleImputer
 from sklearn.pipeline import Pipeline
-from sklearn.preprocessing import OneHotEncoder,StandardScaler
+from sklearn.preprocessing import OneHotEncoder, StandardScaler, LabelEncoder
 
 from src.utils import save_object
 from src.logger import logging
@@ -26,7 +24,7 @@ class DataTransformation:
     def get_transformer_object(self):
         try:
             # Updated column names
-            numerical_columns = ['vehicle_age', 'km_driven', 'mileage', 'engine', 'max_power', 'seats']
+            numerical_columns = ['vehicle_age', 'km_driven', 'mileage', 'engine', 'max_power', 'seats', 'model']
             categorical_columns = ['seller_type', 'fuel_type', 'transmission_type']
 
             num_pipeline = Pipeline(
@@ -35,6 +33,7 @@ class DataTransformation:
                     ("scaler", StandardScaler())
                 ]
             )
+
             cat_pipeline = Pipeline(
                 steps=[
                     ('imputer', SimpleImputer(strategy='most_frequent')),
@@ -42,6 +41,7 @@ class DataTransformation:
                     ("scaler", StandardScaler(with_mean=False))
                 ]
             )
+
             logging.info("Encoding and scaling completed")
 
             preprocessor = ColumnTransformer(
@@ -55,6 +55,16 @@ class DataTransformation:
             logging.error(f"Error while getting transformer object: {e}")
             raise CustomException(e, sys) from e
 
+    def encode_model_column(self, df):
+        try:
+            label_encoder = LabelEncoder()
+            df['model'] = label_encoder.fit_transform(df['model'])
+            logging.info("Label encoding of 'model' column completed")
+            return label_encoder
+        except Exception as e:
+            logging.error(f"Error during encoding 'model' column: {e}")
+            raise CustomException(e, sys) from e
+
     def initiate_data_transformation(self, train_path, test_path):
         try:
             train_df = pd.read_csv(train_path)
@@ -63,6 +73,10 @@ class DataTransformation:
 
             logging.info(f"Train DataFrame columns: {train_df.columns.tolist()}")
             logging.info(f"Test DataFrame columns: {test_df.columns.tolist()}")
+
+            logging.info('Encoding model column in train and test dataframes')
+            label_encoder = self.encode_model_column(train_df)
+            self.encode_model_column(test_df)
 
             logging.info('Obtaining preprocessing object')
             preprocessing_obj = self.get_transformer_object()
@@ -107,9 +121,9 @@ class DataTransformation:
                 train_arr,
                 test_arr,
                 self.data_transformation_config.preprocessor_obj_file_path,
+                label_encoder
             )
 
         except Exception as e:
             logging.error(f"Error during data transformation: {e}")
             raise CustomException(e, sys) from e
-#
