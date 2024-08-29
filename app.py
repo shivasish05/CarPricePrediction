@@ -4,36 +4,121 @@ import openai
 from openai import OpenAI
 from src.pipeline.predict_pipeline import PredictPipeline, CustomData
 
-
-def get_openai_response(prompt, api_key):
-    """Generate a response from OpenAI's GPT model based on the provided prompt."""
+def get_openai_response(messages, api_key):
+    """Generate a response from OpenAI's GPT model based on the conversation history."""
     openai.api_key = api_key
     client = OpenAI(api_key=api_key)
     try:
         response = client.chat.completions.create(
-            model="gpt-4o",  # You can change this to a different model if needed
-            messages=[
-    {"role": "system", "content": "You are consultent."},
-    {"role": "user", "content": prompt}
-  ],
+            model="gpt-4o",  # Ensure the correct model name
+            messages=messages,
         )
         return response.choices[0].message.content
-
     except Exception as e:
         return f"Error generating response: {e}"
 
-
 def main():
-    st.title("Car Price Prediction App")
+    st.set_page_config(page_title="Car Price Prediction App", page_icon="🚗", layout="wide")
+
+    # Custom CSS for styling
+    st.markdown("""
+        <style>
+            body {
+                font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+                background-color: #2C3E50;
+            }
+            .stApp {
+                background-color: #2C3E50;
+                color: white;
+            }
+            .sidebar .sidebar-content {
+                background-color: #2C3E50;
+                padding: 20px;
+                border-radius: 10px;
+            }
+            .sidebar .sidebar-content h2 {
+                color: #ECF0F1;
+            }
+            .sidebar .sidebar-content input {
+                background-color: #34495E;
+                color: white;
+                border-radius: 5px;
+                border: 1px solid #7F8C8D;
+            }
+            .sidebar .sidebar-content label {
+                color: #ECF0F1;
+            }
+            .stButton button {
+                background-color: #E74C3C;
+                color: white;
+                font-size: 16px;
+                border-radius: 10px;
+                padding: 10px 20px;
+            }
+            .stButton button:hover {
+                background-color: #C0392B;
+                color: white;
+            }
+            .chat-box {
+                background-color: #34495E;
+                border-radius: 10px;
+                padding: 20px;
+                margin-bottom: 20px;
+                box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.1);
+            }
+            .user-message {
+                background-color: #1ABC9C;
+                color: white;
+                padding: 10px 15px;
+                border-radius: 10px;
+                margin-bottom: 10px;
+                max-width: 80%;
+            }
+            .assistant-message {
+                background-color: #3498DB;
+                color: white;
+                padding: 10px 15px;
+                border-radius: 10px;
+                margin-bottom: 10px;
+                max-width: 80%;
+            }
+            .prediction-result {
+                background-color: #27AE60;
+                border-left: 6px solid #2ECC71;
+                padding: 20px;
+                border-radius: 10px;
+                margin-bottom: 20px;
+                color: white;
+            }
+            .stTextInput > div > input {
+                background-color: #34495E;
+                color: white;
+                border-radius: 10px;
+                padding: 10px;
+                border: 1px solid #7F8C8D;
+            }
+            .stTextInput > div > label {
+                color: white;
+            }
+            h1, h2, h3, h4, h5, h6 {
+                color: white;
+            }
+            label {
+                color: white;
+            }
+        </style>
+    """, unsafe_allow_html=True)
+
+    st.title("🚗 Car Price Prediction App")
 
     # Sidebar for OpenAI API Key
-    st.sidebar.header("OpenAI API Key")
+    st.sidebar.header("🔑 OpenAI API Key")
     api_key = st.sidebar.text_input("Enter your OpenAI API Key", type="password")
 
-    st.write("Please enter the details of the car to get the price prediction.")
+    st.write("### Please enter the details of the car to get the price prediction.")
 
     # Collect input from the user
-    model = st.selectbox("Model Name",['Alto', 'Grand', 'i20', 'Ecosport', 'Wagon R', 'i10', 'Venue',
+    model = st.selectbox("Model Name", ['Alto', 'Grand', 'i20', 'Ecosport', 'Wagon R', 'i10', 'Venue',
        'Swift', 'Verna', 'Duster', 'Cooper', 'Ciaz', 'C-Class', 'Innova',
        'Baleno', 'Swift Dzire', 'Vento', 'Creta', 'City', 'Bolero',
        'Fortuner', 'KWID', 'Amaze', 'Santro', 'XUV500', 'KUV100', 'Ignis',
@@ -61,11 +146,20 @@ def main():
     fuel_type = st.selectbox("Fuel Type", ["Petrol", "Diesel", "CNG"])
     transmission_type = st.selectbox("Transmission Type", ["Manual", "Automatic"])
 
+    if "chat_history" not in st.session_state:
+        st.session_state.chat_history = []
+    
+    if "predicted" not in st.session_state:
+        st.session_state.predicted = False
+
+    if "prediction" not in st.session_state:
+        st.session_state.prediction = None
+
     # Button to make prediction
     if st.button("Predict"):
         # Create an instance of CustomData with the user input
         custom_data = CustomData(
-            model = model,
+            model=model,
             vehicle_age=vehicle_age,
             km_driven=km_driven,
             mileage=mileage,
@@ -85,47 +179,65 @@ def main():
         prediction = predict_pipeline.predict(data_df)
 
         # Show prediction result
-        st.markdown(
-    f"<h3 style='color: #FF6347;'>Predicted Price: <span style='color: #32CD32;'>₹{prediction[0]:,.2f}</span></h3>",
-    unsafe_allow_html=True
-)
+        st.markdown(f"""
+            <div class="prediction-result">
+                <h4>Predicted Price: ₹{prediction[0]:,.2f}</h4>
+            </div>
+        """, unsafe_allow_html=True)
 
-        # Generate and display response from OpenAI if API key is provided
-        if api_key:
-            prompt = ( f"""
-You are a seasoned automotive consultant with extensive experience in evaluating used car prices. Based on the prediction for a {model} with the following details:
+        st.session_state.predicted = True
+        st.session_state.prediction = prediction[0]
 
-- **Model:** {model}
-- **Vehicle Age:** {vehicle_age} years
-- **KM Driven:** {km_driven} km
-- **Mileage:** {mileage} km/l
-- **Engine:** {engine} cc
-- **Max Power:** {max_power} bhp
-- **Seats:** {seats}
-- **Seller Type:** {seller_type}
-- **Fuel Type:** {fuel_type}
-- **Transmission Type:** {transmission_type}
+        # Initialize chat history with prediction context
+        st.session_state.chat_history = [
+            {"role": "system", "content": "You are a helpful car consultent."},
+            {"role": "user", "content": (
+                f"The predicted price for a {model} with the following details is ₹{prediction[0]:,.2f}:\n\n"
+                f"- **Model:** {model}\n"
+                f"- **Vehicle Age:** {vehicle_age} years\n"
+                f"- **KM Driven:** {km_driven} km\n"
+                f"- **Mileage:** {mileage} km/l\n"
+                f"- **Engine:** {engine} cc\n"
+                f"- **Max Power:** {max_power} bhp\n"
+                f"- **Seats:** {seats}\n"
+                f"- **Seller Type:** {seller_type}\n"
+                f"- **Fuel Type:** {fuel_type}\n"
+                f"- **Transmission Type:** {transmission_type}\n"
+                
+            )}
+        ]
 
-The predicted price is ₹{prediction[0]:,.2f}.
+    # Real-time Chatbot interface (only available after prediction)
+    if st.session_state.predicted:
+        st.write("## Ask further questions about the prediction")
+        
+        # Display chat history
+        for msg in st.session_state.chat_history:
+            if msg['role'] == 'user':
+                st.markdown(f'<div class="user-message">**User:** {msg["content"]}</div>', unsafe_allow_html=True)
+            elif msg['role'] == 'assistant':
+                st.markdown(f'<div class="assistant-message">**Assistant:** {msg["content"]}</div>', unsafe_allow_html=True)
 
-Please provide a detailed analysis including:
+        # User input for chat
+        user_message = st.text_input("Type your message:", key="chat_input_key", placeholder="Ask something about the prediction...")
 
-1. **Market Position:** Compare this predicted price with similar vehicles currently available in the market. Are there any specific trends, brand value, or market conditions affecting this price?
-
-2. **Price Justification:** Explain the factors that contribute to this predicted price. Consider the car’s age, condition, mileage, and features. How do these aspects affect the value of the vehicle in the current market?
-
-3. **Actionable Insights:** Provide practical advice on what actions the user can take to either increase the car’s value or negotiate effectively if they are buying or selling this vehicle.
-
-The goal is to help the user make well-informed decisions regarding their car based on the prediction and current market conditions.
-"""
-)
-
-            response = get_openai_response(prompt, api_key)
-            st.write("Response from OpenAI:")
-            st.write(response)
-        else:
-            st.write("Please provide your OpenAI API key to get a detailed response.")
-
+        if st.button("Send"):
+            if user_message:
+                # Add user message to chat history
+                st.session_state.chat_history.append({"role": "user", "content": user_message})
+                
+                if api_key:
+                    with st.spinner('Thinking...'):
+                        # Get OpenAI response
+                        assistant_response = get_openai_response(st.session_state.chat_history, api_key)
+                        st.session_state.chat_history.append({"role": "assistant", "content": assistant_response})
+                        st.markdown(f'<div class="assistant-message">**Assistant:** {assistant_response}</div>', unsafe_allow_html=True)
+                else:
+                    st.write("Please provide your OpenAI API key to get responses.")
+            
+        if st.button("Clear Chat History"):
+            st.session_state.chat_history = []
+            st.write("Chat history cleared.")
 
 if __name__ == "__main__":
     main()
