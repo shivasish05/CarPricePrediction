@@ -13,6 +13,7 @@ This project is a machine learning application designed to predict the price of 
 - **Streamlit Web Application**: A user-friendly web interface to interact with the model and view predictions.
 
 ## Project Structure
+```bash
 CarPricePrediction/
 │
 ├── src/
@@ -36,8 +37,7 @@ CarPricePrediction/
 ├── app.py
 ├── README.md
 └── requirements.txt
-
-
+```
 ## Installation
 
 ### Prerequisites
